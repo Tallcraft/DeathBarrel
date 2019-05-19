@@ -1,0 +1,8 @@
+name: DeathBarrel
+version: ${project.version}
+main: com.tallcraft.deathbarrel.DeathBarrel
+api-version: 1.14
+prefix: DeathBarrel
+authors: [Tallcraft]
+description: When a player dies the plugin puts the drops in barrels at the death location.
+website: https://tallcraft.com
