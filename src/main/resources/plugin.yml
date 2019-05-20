@@ -6,3 +6,7 @@ prefix: DeathBarrel
 authors: [Tallcraft]
 description: When a player dies the plugin puts the drops in barrels at the death location.
 website: https://tallcraft.com
+permissions:
+  deathbarrel.use:
+    description: Enables use of death barrels
+    default: true

@@ -26,6 +26,11 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerDeathEvent(PlayerDeathEvent event) {
         Player player = event.getEntity();
+
+        if (!player.hasPermission("deathbarrel.use")) {
+            return;
+        }
+
         Location location = player.getLocation();
         List<ItemStack> drops = event.getDrops();
 
