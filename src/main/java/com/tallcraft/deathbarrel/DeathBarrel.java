@@ -2,6 +2,7 @@ package com.tallcraft.deathbarrel;
 
 import java.util.List;
 
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Barrel;
@@ -18,7 +19,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        // Plugin startup logic
+        // All you have to do is adding this line in your onEnable method:
+        Metrics metrics = new Metrics(this);
         getServer().getPluginManager().registerEvents(this, this);
     }
 
