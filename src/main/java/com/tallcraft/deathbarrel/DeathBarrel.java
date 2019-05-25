@@ -9,6 +9,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryType;
@@ -21,6 +22,7 @@ import java.util.List;
 public final class DeathBarrel extends JavaPlugin implements Listener {
 
     private final int barrelCapacity = InventoryType.BARREL.getDefaultSize();
+    private final String barrelIdentifier = "DeathBarrel";
 
     @Override
     public void onEnable() {
@@ -50,7 +52,34 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         }
 
         block.setType(Material.BARREL);
-        return (Barrel) block.getState();
+
+        // Set identifier to be able to recognise barrel type in the future
+        Barrel barrel = (Barrel) block.getState();
+        barrel.setCustomName(barrelIdentifier);
+
+        barrel.update();
+
+        return barrel;
+    }
+
+    /**
+     * Test if a barrel is a DeathBarrel
+     * @param barrel - Barrel block to test
+     * @return true if DeathBarrel, false otherwise
+     */
+    private boolean isDeathBarrel(Barrel barrel) {
+        String customName = barrel.getCustomName();
+        return customName != null && customName.equals(barrelIdentifier);
+    }
+
+    /**
+     * Test if a Block is a DeathBarrel
+     * @param barrelBlock - Barrel block to test
+     * @return true if DeathBarrel, false otherwise
+     */
+    private boolean isDeathBarrel(Block barrelBlock) {
+        return barrelBlock.getBlockData().getMaterial().equals(Material.BARREL)
+                && isDeathBarrel((Barrel) barrelBlock.getState());
     }
 
     /**
@@ -109,6 +138,13 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
                 + ", " + location.getBlockZ() + "]");
         if (created) {
             player.sendMessage("Created death barrel.");
+        }
+    }
+
+    @EventHandler
+    public void onBlockBreakEvent(BlockBreakEvent event) {
+        if(isDeathBarrel(event.getBlock())) {
+            event.setDropItems(false); // Only cancels container item drop
         }
     }
 }
