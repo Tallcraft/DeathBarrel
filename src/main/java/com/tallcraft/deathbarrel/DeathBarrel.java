@@ -6,17 +6,21 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public final class DeathBarrel extends JavaPlugin implements Listener {
@@ -154,6 +158,24 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
             event.setDropItems(false); // Only cancels container item drop
         }
     }
-
-
+    @EventHandler
+    public void onExplode(EntityExplodeEvent e){
+        /* Clone the list */
+        List<Block> blocks = new ArrayList<>(e.blockList());
+        for (Block block : blocks){
+            if(isDeathBarrel(block)){
+                e.blockList().remove(block);
+            }
+        }
+    }
+    @EventHandler
+    public void onExplode(BlockExplodeEvent e){
+        /* Clone the list */
+        List<Block> blocks = new ArrayList<>(e.blockList());
+        for (Block block : blocks){
+            if(isDeathBarrel(block)){
+                e.blockList().remove(block);
+            }
+        }
+    }
 }
