@@ -140,7 +140,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         /* Found the air to the terrain surface*/
         while (location.getBlock().getType()!=Material.AIR && location.getBlock().getType()!=Material.VOID_AIR && location.getBlock().getType()!=Material.CAVE_AIR && location.getBlockX()>0){
-            if(location.getY() > 254)
+            if(location.getY() > 253)
                 return;
             location.setY(location.getY()+1);
         }
