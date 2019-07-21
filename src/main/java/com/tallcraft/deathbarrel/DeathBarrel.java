@@ -31,6 +31,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         // All you have to do is adding this line in your onEnable method:
+        saveDefaultConfig();
+        reloadConfig();
         Metrics metrics = new Metrics(this);
         getServer().getPluginManager().registerEvents(this, this);
     }
@@ -147,8 +149,9 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         player.sendMessage("You died at [" + location.getBlockX() + ", " + location.getBlockY()
                 + ", " + location.getBlockZ() + "]");
+        player.sendMessage(Util.fillArgs(getConfig().getString("msgs.deathLocation"),String.valueOf(location.getBlockX()),String.valueOf(location.getBlockY()),String.valueOf(location.getBlockZ())));
         if (created) {
-            player.sendMessage("Created death barrel.");
+            player.sendMessage(Util.fillArgs(getConfig().getString("msgs.barrelCreated")));
         }
     }
 
