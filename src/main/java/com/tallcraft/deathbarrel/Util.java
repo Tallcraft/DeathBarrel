@@ -1,6 +1,5 @@
 package com.tallcraft.deathbarrel;
 
-import com.sun.istack.internal.Nullable;
 import org.apache.commons.lang.StringUtils;
 
 public class Util {
@@ -11,7 +10,7 @@ public class Util {
      * @param args args
      * @return filled text
      */
-    public static String fillArgs(@Nullable String raw, @Nullable String... args) {
+    public static String fillArgs(String raw, String... args) {
         if (raw == null)
             return "Invalid message: null";
         if (raw.isEmpty())
