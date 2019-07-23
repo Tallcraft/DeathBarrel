@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -58,8 +59,15 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         }
 
         block.setType(Material.BARREL);
-
         // Set identifier to be able to recognise barrel type in the future
+
+        // To fix java.lang.ClassCastException: org.bukkit.craftbukkit.v1_14_R1.block.CraftBlockState cannot be cast to org.bukkit.block.Barrel
+        block.getState().setType(Material.BARREL);
+        BlockState state = block.getState();
+        if(!(state instanceof Barrel)) {
+            return null; //Block place failed
+        }
+
         Barrel barrel = (Barrel) block.getState();
         barrel.setCustomName(barrelIdentifier);
 
@@ -140,7 +148,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         /* Found the air to the terrain surface*/
         while (location.getBlock().getType()!=Material.AIR && location.getBlock().getType()!=Material.VOID_AIR && location.getBlock().getType()!=Material.CAVE_AIR && location.getBlockX()>0){
-            if(location.getY() > 253)
+            if(location.getY() > location.getWorld().getMaxHeight()-2)
                 return;
             location.setY(location.getY()+1);
         }
