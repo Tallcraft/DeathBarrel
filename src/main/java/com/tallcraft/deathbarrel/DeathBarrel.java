@@ -145,12 +145,14 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         Location location = player.getLocation();
         List<ItemStack> drops = event.getDrops();
-
+        while (location.getBlockY()<2){
+            location.setY(location.getBlockY()+1);
+        }
         /* Found the air to the terrain surface*/
-        while (location.getBlock().getType()!=Material.AIR && location.getBlock().getType()!=Material.VOID_AIR && location.getBlock().getType()!=Material.CAVE_AIR && location.getBlockX()>0){
+        while (location.getBlock().getType()!=Material.AIR && location.getBlock().getType()!=Material.VOID_AIR && location.getBlock().getType()!=Material.CAVE_AIR){
             if(location.getY() > location.getWorld().getMaxHeight()-2)
                 return;
-            location.setY(location.getY()+1);
+            location.setY(location.getBlockY()+1);
         }
 
         boolean created = createDeathBarrels(player, drops, location);
