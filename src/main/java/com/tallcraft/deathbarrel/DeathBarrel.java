@@ -6,17 +6,22 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public final class DeathBarrel extends JavaPlugin implements Listener {
@@ -27,6 +32,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         // All you have to do is adding this line in your onEnable method:
+        saveDefaultConfig();
+        reloadConfig();
         Metrics metrics = new Metrics(this);
         getServer().getPluginManager().registerEvents(this, this);
     }
@@ -52,8 +59,15 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         }
 
         block.setType(Material.BARREL);
-
         // Set identifier to be able to recognise barrel type in the future
+
+        // To fix java.lang.ClassCastException: org.bukkit.craftbukkit.v1_14_R1.block.CraftBlockState cannot be cast to org.bukkit.block.Barrel
+        block.getState().setType(Material.BARREL);
+        BlockState state = block.getState();
+        if(!(state instanceof Barrel)) {
+            return null; //Block place failed
+        }
+
         Barrel barrel = (Barrel) block.getState();
         barrel.setCustomName(barrelIdentifier);
 
@@ -131,13 +145,23 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         Location location = player.getLocation();
         List<ItemStack> drops = event.getDrops();
+        while (location.getBlockY()<2){
+            location.setY(location.getBlockY()+1);
+        }
+        /* Found the air to the terrain surface*/
+        while (location.getBlock().getType()!=Material.AIR && location.getBlock().getType()!=Material.VOID_AIR && location.getBlock().getType()!=Material.CAVE_AIR){
+            if(location.getY() > location.getWorld().getMaxHeight()-2)
+                return;
+            location.setY(location.getBlockY()+1);
+        }
 
         boolean created = createDeathBarrels(player, drops, location);
 
         player.sendMessage("You died at [" + location.getBlockX() + ", " + location.getBlockY()
                 + ", " + location.getBlockZ() + "]");
+        player.sendMessage(Util.fillArgs(getConfig().getString("msgs.deathLocation"),String.valueOf(location.getBlockX()),String.valueOf(location.getBlockY()),String.valueOf(location.getBlockZ())));
         if (created) {
-            player.sendMessage("Created death barrel.");
+            player.sendMessage(Util.fillArgs(getConfig().getString("msgs.barrelCreated")));
         }
     }
 
@@ -145,6 +169,26 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     public void onBlockBreakEvent(BlockBreakEvent event) {
         if(isDeathBarrel(event.getBlock())) {
             event.setDropItems(false); // Only cancels container item drop
+        }
+    }
+    @EventHandler
+    public void onExplode(EntityExplodeEvent e){
+        /* Clone the list */
+        List<Block> blocks = new ArrayList<>(e.blockList());
+        for (Block block : blocks){
+            if(isDeathBarrel(block)){
+                e.blockList().remove(block);
+            }
+        }
+    }
+    @EventHandler
+    public void onExplode(BlockExplodeEvent e){
+        /* Clone the list */
+        List<Block> blocks = new ArrayList<>(e.blockList());
+        for (Block block : blocks){
+            if(isDeathBarrel(block)){
+                e.blockList().remove(block);
+            }
         }
     }
 }
