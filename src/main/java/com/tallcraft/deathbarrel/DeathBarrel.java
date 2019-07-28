@@ -164,8 +164,6 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         boolean created = createDeathBarrels(player, drops, location);
 
-        player.sendMessage("You died at [" + location.getBlockX() + ", " + location.getBlockY()
-                + ", " + location.getBlockZ() + "]");
         player.sendMessage(Util.fillArgs(getConfig().getString("messages.deathLocation"),
                 String.valueOf(location.getBlockX()), String.valueOf(location.getBlockY()),
                 String.valueOf(location.getBlockZ())));
