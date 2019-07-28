@@ -7,7 +7,6 @@ import org.bukkit.Material;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -51,7 +50,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         Block blockBelow = location.clone().subtract(0, 1, 0).getBlock();
         ItemStack item = new ItemStack(Material.BARREL, 1);
 
-        BlockPlaceEvent blockPlaceEvent = new BlockPlaceEvent(block, block.getState(), blockBelow, item, player, true, EquipmentSlot.HAND);
+        BlockPlaceEvent blockPlaceEvent = new BlockPlaceEvent(block, block.getState(), blockBelow,
+                item, player, true, EquipmentSlot.HAND);
         Bukkit.getServer().getPluginManager().callEvent(blockPlaceEvent);
 
         if (blockPlaceEvent.isCancelled()) {
@@ -61,10 +61,12 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         block.setType(Material.BARREL);
         // Set identifier to be able to recognise barrel type in the future
 
-        // To fix java.lang.ClassCastException: org.bukkit.craftbukkit.v1_14_R1.block.CraftBlockState cannot be cast to org.bukkit.block.Barrel
+        // To fix java.lang.ClassCastException:
+        // org.bukkit.craftbukkit.v1_14_R1.block.CraftBlockState cannot be cast to
+        // org.bukkit.block.Barrel
         block.getState().setType(Material.BARREL);
         BlockState state = block.getState();
-        if(!(state instanceof Barrel)) {
+        if (!(state instanceof Barrel)) {
             return null; //Block place failed
         }
 
@@ -78,6 +80,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
     /**
      * Test if a barrel is a DeathBarrel
+     *
      * @param barrel - Barrel block to test
      * @return true if DeathBarrel, false otherwise
      */
@@ -88,6 +91,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
     /**
      * Test if a Block is a DeathBarrel
+     *
      * @param barrelBlock - Barrel block to test
      * @return true if DeathBarrel, false otherwise
      */
@@ -116,7 +120,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         int placedBarrelCount = 0;
 
         for (int i = 0; i < barrelCount; i++) {
-            Barrel barrel = placeBarrel(player, i == 0 ? location : location.clone().add(0, i, 0));
+            Barrel barrel = placeBarrel(player, i == 0 ? location : location.clone()
+                    .add(0, i, 0));
             if (barrel == null) {
                 // If barrel placement fails skip it. This can lead to not all drops being processed.
                 // Remaining items not stored in barrels will be dropped on the floor.
@@ -145,21 +150,25 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         Location location = player.getLocation();
         List<ItemStack> drops = event.getDrops();
-        while (location.getBlockY()<2){
-            location.setY(location.getBlockY()+1);
+        while (location.getBlockY() < 2) {
+            location.setY(location.getBlockY() + 1);
         }
         /* Found the air to the terrain surface*/
-        while (location.getBlock().getType()!=Material.AIR && location.getBlock().getType()!=Material.VOID_AIR && location.getBlock().getType()!=Material.CAVE_AIR){
-            if(location.getY() > location.getWorld().getMaxHeight()-2)
+        while (location.getBlock().getType() != Material.AIR
+                && location.getBlock().getType() != Material.VOID_AIR
+                && location.getBlock().getType() != Material.CAVE_AIR) {
+            if (location.getY() > location.getWorld().getMaxHeight() - 2)
                 return;
-            location.setY(location.getBlockY()+1);
+            location.setY(location.getBlockY() + 1);
         }
 
         boolean created = createDeathBarrels(player, drops, location);
 
         player.sendMessage("You died at [" + location.getBlockX() + ", " + location.getBlockY()
                 + ", " + location.getBlockZ() + "]");
-        player.sendMessage(Util.fillArgs(getConfig().getString("msgs.deathLocation"),String.valueOf(location.getBlockX()),String.valueOf(location.getBlockY()),String.valueOf(location.getBlockZ())));
+        player.sendMessage(Util.fillArgs(getConfig().getString("msgs.deathLocation"),
+                String.valueOf(location.getBlockX()), String.valueOf(location.getBlockY()),
+                String.valueOf(location.getBlockZ())));
         if (created) {
             player.sendMessage(Util.fillArgs(getConfig().getString("msgs.barrelCreated")));
         }
@@ -167,26 +176,28 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockBreakEvent(BlockBreakEvent event) {
-        if(isDeathBarrel(event.getBlock())) {
+        if (isDeathBarrel(event.getBlock())) {
             event.setDropItems(false); // Only cancels container item drop
         }
     }
+
     @EventHandler
-    public void onExplode(EntityExplodeEvent e){
+    public void onExplode(EntityExplodeEvent e) {
         /* Clone the list */
         List<Block> blocks = new ArrayList<>(e.blockList());
-        for (Block block : blocks){
-            if(isDeathBarrel(block)){
+        for (Block block : blocks) {
+            if (isDeathBarrel(block)) {
                 e.blockList().remove(block);
             }
         }
     }
+
     @EventHandler
-    public void onExplode(BlockExplodeEvent e){
+    public void onExplode(BlockExplodeEvent e) {
         /* Clone the list */
         List<Block> blocks = new ArrayList<>(e.blockList());
-        for (Block block : blocks){
-            if(isDeathBarrel(block)){
+        for (Block block : blocks) {
+            if (isDeathBarrel(block)) {
                 e.blockList().remove(block);
             }
         }
