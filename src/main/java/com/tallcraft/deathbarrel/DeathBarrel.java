@@ -9,6 +9,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -140,11 +141,15 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     }
 
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR,ignoreCancelled = true)
     public void onPlayerDeathEvent(PlayerDeathEvent event) {
         Player player = event.getEntity();
 
         if (!player.hasPermission("deathbarrel.use")) {
+            return;
+        }
+
+        if(player.getInventory().getStorageContents().length <= 0){
             return;
         }
 
@@ -172,14 +177,14 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR,ignoreCancelled = true)
     public void onBlockBreakEvent(BlockBreakEvent event) {
         if (isDeathBarrel(event.getBlock())) {
             event.setDropItems(false); // Only cancels container item drop
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR,ignoreCancelled = true)
     public void onExplode(EntityExplodeEvent e) {
         /* Clone the list */
         List<Block> blocks = new ArrayList<>(e.blockList());
@@ -190,7 +195,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR,ignoreCancelled = true)
     public void onExplode(BlockExplodeEvent e) {
         /* Clone the list */
         List<Block> blocks = new ArrayList<>(e.blockList());
