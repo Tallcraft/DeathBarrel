@@ -15,8 +15,11 @@ import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -27,12 +30,14 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
     private final int barrelCapacity = InventoryType.BARREL.getDefaultSize();
     private final String barrelIdentifier = "DeathBarrel";
+    private boolean removeOnEmpty;
 
     @Override
     public void onEnable() {
         // All you have to do is adding this line in your onEnable method:
         saveDefaultConfig();
         reloadConfig();
+        removeOnEmpty = getConfig().getBoolean("removeOnEmpty");
         Metrics metrics = new Metrics(this);
         getServer().getPluginManager().registerEvents(this, this);
     }
@@ -87,6 +92,13 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     private boolean isDeathBarrel(Barrel barrel) {
         String customName = barrel.getCustomName();
         return customName != null && customName.equals(barrelIdentifier);
+    }
+
+    private boolean isDeathBarrel(InventoryHolder inventoryHolder) {
+        if (!(inventoryHolder instanceof Barrel)) {
+            return false;
+        }
+        return isDeathBarrel((Barrel) inventoryHolder);
     }
 
     /**
@@ -199,5 +211,35 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
                 e.blockList().remove(block);
             }
         }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        // Feature disabled via config
+        if (!removeOnEmpty) {
+            return;
+        }
+
+        Inventory inventory = event.getInventory();
+        InventoryHolder inventoryHolder = event.getInventory().getHolder();
+
+        // Can't find inventory container
+        if (inventoryHolder == null) {
+            return;
+        }
+
+        // Closing inventory is not a death barrel
+        if (!isDeathBarrel(inventoryHolder)) {
+            return;
+        }
+
+        // Death barrel is not empty
+        if (!inventory.isEmpty()) {
+            return;
+        }
+
+        // Remove empty death barrel
+        Barrel deathBarrel = (Barrel) inventoryHolder;
+        deathBarrel.getBlock().setType(Material.AIR);
     }
 }
