@@ -230,7 +230,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         Barrel barrel = (Barrel) block.getState();
         Player player = event.getPlayer();
 
-        if(protectFromOtherPlayers && player != null && !isOwner(player, barrel)) {
+        if (protectFromOtherPlayers && player != null && !player.hasPermission("deathbarrel.accessprotected")
+                && !isOwner(player, barrel)) {
             event.setCancelled(true);
             player.sendMessage("This barrel is locked. Only the owner can break it.");
             return;
@@ -281,7 +282,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         Barrel barrel = (Barrel) inventoryHolder;
         Player player = (Player) event.getPlayer();
 
-        if(!isOwner(player, barrel)) {
+        if(!player.hasPermission("deathbarrel.accessprotected") && !isOwner(player, barrel)) {
             event.setCancelled(true);
             player.sendMessage("This barrel is locked. Only the owner can access it.");
             return;
