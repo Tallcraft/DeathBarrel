@@ -4,9 +4,11 @@ import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -16,11 +18,14 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -31,14 +36,21 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     private final int barrelCapacity = InventoryType.BARREL.getDefaultSize();
     private final String barrelIdentifier = "DeathBarrel";
     private boolean removeOnEmpty;
+    private boolean protectFromOtherPlayers;
 
     @Override
     public void onEnable() {
-        // All you have to do is adding this line in your onEnable method:
+        // Initialize config.
         saveDefaultConfig();
         reloadConfig();
-        removeOnEmpty = getConfig().getBoolean("removeOnEmpty");
-        Metrics metrics = new Metrics(this);
+        FileConfiguration config = getConfig();
+        removeOnEmpty = config.getBoolean("removeOnEmpty");
+        protectFromOtherPlayers = config.getBoolean("protectFromOtherPlayers");
+
+        // Init bStats metrics.
+        new Metrics(this);
+
+        // Enable event handlers.
         getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -75,9 +87,14 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
             return null; //Block place failed
         }
 
+        // Set barrel metadata which can be used to identify it and its owner.
         Barrel barrel = (Barrel) block.getState();
         barrel.setCustomName(barrelIdentifier);
+        PersistentDataContainer data = barrel.getPersistentDataContainer();
 
+        data.set(new NamespacedKey(this, "isDeathBarrel"), PersistentDataType.INTEGER, 1);
+        data.set(new NamespacedKey(this, "version"), PersistentDataType.STRING, this.getDescription().getVersion());
+        data.set(new NamespacedKey(this, "ownerUUID"), PersistentDataType.STRING, player.getUniqueId().toString());
         barrel.update();
 
         return barrel;
@@ -90,15 +107,33 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
      * @return true if DeathBarrel, false otherwise
      */
     private boolean isDeathBarrel(Barrel barrel) {
-        String customName = barrel.getCustomName();
-        return customName != null && customName.equals(barrelIdentifier);
+        return barrel.getPersistentDataContainer().has(new NamespacedKey(this, "isDeathBarrel"), PersistentDataType.INTEGER);
     }
 
     private boolean isDeathBarrel(InventoryHolder inventoryHolder) {
-        if (!(inventoryHolder instanceof Barrel)) {
+        if (inventoryHolder == null || !(inventoryHolder instanceof Barrel)) {
             return false;
         }
         return isDeathBarrel((Barrel) inventoryHolder);
+    }
+
+    /**
+     * Test if a player owns a barrel. This means it was created as a result of
+     * their death.
+     * @param player - Player to check ownership for.
+     * @param barrel - Barrel to check.
+     * @return true if the barrel belongs to the player, false otherwise. If
+     * given player or barrel is null this check will always return false.
+     */
+    private boolean isOwner(Player player, Barrel barrel) {
+        if(player == null || barrel == null) {
+            return false;
+        }
+        String ownerUUID = barrel.getPersistentDataContainer().get(new NamespacedKey(this, "ownerUUID"), PersistentDataType.STRING);
+        if(ownerUUID == null) {
+            return false;
+        }
+        return player.getUniqueId().toString().equals(ownerUUID);
     }
 
     /**
@@ -186,9 +221,25 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockBreakEvent(BlockBreakEvent event) {
-        if (isDeathBarrel(event.getBlock())) {
-            event.setDropItems(false); // Only cancels container item drop
+        Block block = event.getBlock();
+
+        if (!isDeathBarrel(block)) {
+            return;
         }
+
+        Barrel barrel = (Barrel) block.getState();
+        Player player = event.getPlayer();
+
+        if(protectFromOtherPlayers && player != null && !isOwner(player, barrel)) {
+            event.setCancelled(true);
+            player.sendMessage("This barrel is locked. Only the owner can break it.");
+            return;
+        }
+
+        // We allow the barrel to be broken, but don't drop the actual barrel
+        // item. Otherwise players can create unlimited barrels by dying
+        // repeatedly.
+        event.setDropItems(false); // Only cancels container item drop
     }
 
     @EventHandler
@@ -214,6 +265,31 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     }
 
     @EventHandler
+    public void onInventoryOpen(InventoryOpenEvent event) {
+        // This event handler is only used for the barrel owner check.
+        if(!protectFromOtherPlayers) {
+            return;
+        }
+
+        InventoryHolder inventoryHolder = event.getInventory().getHolder();
+
+        // Opening inventory is not a death barrel
+        if (!isDeathBarrel(inventoryHolder)) {
+            return;
+        }
+
+        Barrel barrel = (Barrel) inventoryHolder;
+        Player player = (Player) event.getPlayer();
+
+        if(!isOwner(player, barrel)) {
+            event.setCancelled(true);
+            player.sendMessage("This barrel is locked. Only the owner can access it.");
+            return;
+        }
+
+    }
+
+    @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         // Feature disabled via config
         if (!removeOnEmpty) {
@@ -222,11 +298,6 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         Inventory inventory = event.getInventory();
         InventoryHolder inventoryHolder = event.getInventory().getHolder();
-
-        // Can't find inventory container
-        if (inventoryHolder == null) {
-            return;
-        }
 
         // Closing inventory is not a death barrel
         if (!isDeathBarrel(inventoryHolder)) {
