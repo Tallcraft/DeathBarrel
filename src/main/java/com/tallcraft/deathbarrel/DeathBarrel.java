@@ -68,7 +68,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     }
 
     /**
-     * Places a barrel block while respecting other plugins / player build permission
+     * Places a barrel block while respecting other plugins / player build
+     * permission
      *
      * @param player   - Player to act as.
      * @param location - Where to place the barrel block
@@ -79,8 +80,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         Block blockBelow = location.clone().subtract(0, 1, 0).getBlock();
         ItemStack item = new ItemStack(Material.BARREL, 1);
 
-        BlockPlaceEvent blockPlaceEvent = new BlockPlaceEvent(block, block.getState(), blockBelow,
-                item, player, true, EquipmentSlot.HAND);
+        BlockPlaceEvent blockPlaceEvent = new BlockPlaceEvent(block, block.getState(), blockBelow, item, player, true,
+                EquipmentSlot.HAND);
         Bukkit.getServer().getPluginManager().callEvent(blockPlaceEvent);
 
         if (blockPlaceEvent.isCancelled()) {
@@ -96,9 +97,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         block.getState().setType(Material.BARREL);
         BlockState state = block.getState();
         if (!(state instanceof Barrel)) {
-            return null; //Block place failed
+            return null; // Block place failed
         }
-
 
         Barrel barrel = (Barrel) block.getState();
         barrel.setCustomName(config.getString("messages.barrelInventoryTitle"));
@@ -120,7 +120,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
      * @return true if DeathBarrel, false otherwise
      */
     private boolean isDeathBarrel(Barrel barrel) {
-        return barrel.getPersistentDataContainer().has(new NamespacedKey(this, "isDeathBarrel"), PersistentDataType.INTEGER);
+        return barrel.getPersistentDataContainer().has(new NamespacedKey(this, "isDeathBarrel"),
+                PersistentDataType.INTEGER);
     }
 
     private boolean isDeathBarrel(InventoryHolder inventoryHolder) {
@@ -133,17 +134,19 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     /**
      * Test if a player owns a barrel. This means it was created as a result of
      * their death.
+     * 
      * @param player - Player to check ownership for.
      * @param barrel - Barrel to check.
-     * @return true if the barrel belongs to the player, false otherwise. If
-     * given player or barrel is null this check will always return false.
+     * @return true if the barrel belongs to the player, false otherwise. If given
+     *         player or barrel is null this check will always return false.
      */
     private boolean isOwner(Player player, Barrel barrel) {
-        if(player == null || barrel == null) {
+        if (player == null || barrel == null) {
             return false;
         }
-        String ownerUUID = barrel.getPersistentDataContainer().get(new NamespacedKey(this, "ownerUUID"), PersistentDataType.STRING);
-        if(ownerUUID == null) {
+        String ownerUUID = barrel.getPersistentDataContainer().get(new NamespacedKey(this, "ownerUUID"),
+                PersistentDataType.STRING);
+        if (ownerUUID == null) {
             return false;
         }
         return player.getUniqueId().toString().equals(ownerUUID);
@@ -161,13 +164,15 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     }
 
     /**
-     * Create death barrels and store player drops in them.
-     * Multiple barrels may be stacked on top of location to account for drop list size.
-     * Item drops successfully placed in barrels will be removed from the drop list.
-     * Issues with barrel placement (permissions or other event cancel) can lead to items from
-     * drop list not being processed. The calling method should account for this.
+     * Create death barrels and store player drops in them. Multiple barrels may be
+     * stacked on top of location to account for drop list size. Item drops
+     * successfully placed in barrels will be removed from the drop list. Issues
+     * with barrel placement (permissions or other event cancel) can lead to items
+     * from drop list not being processed. The calling method should account for
+     * this.
      *
-     * @param player   - Player whose drops should be stored. Will be used for barrel place event.
+     * @param player   - Player whose drops should be stored. Will be used for
+     *                 barrel place event.
      * @param drops    - Death drops of player.
      * @param location - Location where barrels should be placed.
      * @return true if death barrel/s have been placed, false otherwise
@@ -180,10 +185,10 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         int placedBarrelCount = 0;
 
         for (int i = 0; i < barrelCount; i++) {
-            Barrel barrel = placeBarrel(player, i == 0 ? location : location.clone()
-                    .add(0, i, 0));
+            Barrel barrel = placeBarrel(player, i == 0 ? location : location.clone().add(0, i, 0));
             if (barrel == null) {
-                // If barrel placement fails skip it. This can lead to not all drops being processed.
+                // If barrel placement fails skip it. This can lead to not all drops being
+                // processed.
                 // Remaining items not stored in barrels will be dropped on the floor.
                 break;
             }
@@ -199,7 +204,6 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         return placedBarrelCount > 0;
     }
 
-
     @EventHandler
     public void onPlayerDeathEvent(PlayerDeathEvent event) {
         Player player = event.getEntity();
@@ -213,9 +217,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         while (location.getBlockY() < 2) {
             location.setY(location.getBlockY() + 1);
         }
-        /* Found the air to the terrain surface*/
-        while (location.getBlock().getType() != Material.AIR
-                && location.getBlock().getType() != Material.VOID_AIR
+        /* Found the air to the terrain surface */
+        while (location.getBlock().getType() != Material.AIR && location.getBlock().getType() != Material.VOID_AIR
                 && location.getBlock().getType() != Material.CAVE_AIR) {
             if (location.getY() > location.getWorld().getMaxHeight() - 2)
                 return;
@@ -224,9 +227,9 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         boolean created = createDeathBarrels(player, drops, location);
 
-        player.sendMessage(Util.fillArgs(getConfig().getString("messages.deathLocation"),
-                String.valueOf(location.getBlockX()), String.valueOf(location.getBlockY()),
-                String.valueOf(location.getBlockZ())));
+        player.sendMessage(
+                Util.fillArgs(getConfig().getString("messages.deathLocation"), String.valueOf(location.getBlockX()),
+                        String.valueOf(location.getBlockY()), String.valueOf(location.getBlockZ())));
         if (created) {
             player.sendMessage(Util.fillArgs(getConfig().getString("messages.barrelCreated")));
         }
@@ -281,7 +284,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
         // This event handler is only used for the barrel owner check.
-        if(!config.getBoolean("protectFromOtherPlayers")) {
+        if (!config.getBoolean("protectFromOtherPlayers")) {
             return;
         }
 
@@ -295,7 +298,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         Barrel barrel = (Barrel) inventoryHolder;
         Player player = (Player) event.getPlayer();
 
-        if(!player.hasPermission("deathbarrel.accessprotected") && !isOwner(player, barrel)) {
+        if (!player.hasPermission("deathbarrel.accessprotected") && !isOwner(player, barrel)) {
             event.setCancelled(true);
             player.sendMessage("This barrel is locked. Only the owner can access it.");
             return;
