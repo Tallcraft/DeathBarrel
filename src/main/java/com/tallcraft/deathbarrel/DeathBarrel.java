@@ -8,7 +8,9 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -34,19 +36,11 @@ import java.util.List;
 public final class DeathBarrel extends JavaPlugin implements Listener {
 
     private final int barrelCapacity = InventoryType.BARREL.getDefaultSize();
-    private boolean removeOnEmpty;
-    private boolean protectFromOtherPlayers;
-    private String barrelInventoryTitle;
+    private FileConfiguration config;
 
     @Override
     public void onEnable() {
-        // Initialize config.
-        saveDefaultConfig();
-        reloadConfig();
-        FileConfiguration config = getConfig();
-        removeOnEmpty = config.getBoolean("removeOnEmpty");
-        protectFromOtherPlayers = config.getBoolean("protectFromOtherPlayers");
-        barrelInventoryTitle = config.getString("messages.barrelInventoryTitle", "DeathBarrel");
+        initConfig();
 
         // Init bStats metrics.
         new Metrics(this);
@@ -55,6 +49,23 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
     }
 
+    private void initConfig() {
+        config = this.getConfig();
+
+        MemoryConfiguration defaultConfig = new MemoryConfiguration();
+
+        defaultConfig.set("removeOnEmpty", true);
+        defaultConfig.set("protectFromOtherPlayers", false);
+
+        ConfigurationSection messages = defaultConfig.createSection("messages");
+        messages.set("deathLocation", "You died at [{0}, {1}, {2}]");
+        messages.set("barrelCreated", "Created death barrel.");
+        messages.set("barrelInventoryTitle", "DeathBarrel");
+
+        config.setDefaults(defaultConfig);
+        config.options().copyDefaults(true);
+        saveConfig();
+    }
 
     /**
      * Places a barrel block while respecting other plugins / player build permission
@@ -90,7 +101,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
 
         Barrel barrel = (Barrel) block.getState();
-        barrel.setCustomName(barrelInventoryTitle);
+        barrel.setCustomName(config.getString("messages.barrelInventoryTitle"));
 
         // Set barrel metadata which can be used to identify it and its owner.
         PersistentDataContainer data = barrel.getPersistentDataContainer();
@@ -232,8 +243,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         Barrel barrel = (Barrel) block.getState();
         Player player = event.getPlayer();
 
-        if (protectFromOtherPlayers && player != null && !player.hasPermission("deathbarrel.accessprotected")
-                && !isOwner(player, barrel)) {
+        if (config.getBoolean("protectFromOtherPlayers") && player != null
+                && !player.hasPermission("deathbarrel.accessprotected") && !isOwner(player, barrel)) {
             event.setCancelled(true);
             player.sendMessage("This barrel is locked. Only the owner can break it.");
             return;
@@ -270,7 +281,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
         // This event handler is only used for the barrel owner check.
-        if(!protectFromOtherPlayers) {
+        if(!config.getBoolean("protectFromOtherPlayers")) {
             return;
         }
 
@@ -295,7 +306,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         // Feature disabled via config
-        if (!removeOnEmpty) {
+        if (!config.getBoolean("removeOnEmpty")) {
             return;
         }
 

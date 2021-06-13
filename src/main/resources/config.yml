@@ -1,6 +1,0 @@
-messages:
-  deathLocation: "You died at [{0}, {1}, {2}]"
-  barrelCreated: "Created death barrel."
-  barrelInventoryTitle: "DeathBarrel"
-removeOnEmpty: true
-protectFromOtherPlayers: false
