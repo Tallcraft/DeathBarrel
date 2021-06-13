@@ -34,9 +34,9 @@ import java.util.List;
 public final class DeathBarrel extends JavaPlugin implements Listener {
 
     private final int barrelCapacity = InventoryType.BARREL.getDefaultSize();
-    private final String barrelIdentifier = "DeathBarrel";
     private boolean removeOnEmpty;
     private boolean protectFromOtherPlayers;
+    private String barrelInventoryTitle;
 
     @Override
     public void onEnable() {
@@ -46,6 +46,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         FileConfiguration config = getConfig();
         removeOnEmpty = config.getBoolean("removeOnEmpty");
         protectFromOtherPlayers = config.getBoolean("protectFromOtherPlayers");
+        barrelInventoryTitle = config.getString("messages.barrelInventoryTitle", "DeathBarrel");
 
         // Init bStats metrics.
         new Metrics(this);
@@ -87,11 +88,12 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
             return null; //Block place failed
         }
 
-        // Set barrel metadata which can be used to identify it and its owner.
-        Barrel barrel = (Barrel) block.getState();
-        barrel.setCustomName(barrelIdentifier);
-        PersistentDataContainer data = barrel.getPersistentDataContainer();
 
+        Barrel barrel = (Barrel) block.getState();
+        barrel.setCustomName(barrelInventoryTitle);
+
+        // Set barrel metadata which can be used to identify it and its owner.
+        PersistentDataContainer data = barrel.getPersistentDataContainer();
         data.set(new NamespacedKey(this, "isDeathBarrel"), PersistentDataType.INTEGER, 1);
         data.set(new NamespacedKey(this, "version"), PersistentDataType.STRING, this.getDescription().getVersion());
         data.set(new NamespacedKey(this, "ownerUUID"), PersistentDataType.STRING, player.getUniqueId().toString());
