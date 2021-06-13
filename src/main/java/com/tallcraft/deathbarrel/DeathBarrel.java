@@ -61,6 +61,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         messages.set("deathLocation", "You died at [{0}, {1}, {2}]");
         messages.set("barrelCreated", "Created death barrel.");
         messages.set("barrelInventoryTitle", "DeathBarrel");
+        messages.set("barrelProtectedBreak", "This barrel is locked. Only the owner can break it.");
+        messages.set("barrelProtectedOpen", "This barrel is locked. Only the owner can access it.");
 
         config.setDefaults(defaultConfig);
         config.options().copyDefaults(true);
@@ -249,7 +251,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         if (config.getBoolean("protectFromOtherPlayers") && player != null
                 && !player.hasPermission("deathbarrel.accessprotected") && !isOwner(player, barrel)) {
             event.setCancelled(true);
-            player.sendMessage("This barrel is locked. Only the owner can break it.");
+            player.sendMessage(config.getString("messages.barrelProtectedBreak"));
             return;
         }
 
@@ -300,7 +302,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
         if (!player.hasPermission("deathbarrel.accessprotected") && !isOwner(player, barrel)) {
             event.setCancelled(true);
-            player.sendMessage("This barrel is locked. Only the owner can access it.");
+            player.sendMessage(config.getString("messages.barrelProtectedOpen"));
             return;
         }
 
