@@ -216,7 +216,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
   /**
    * Spawns barrels on player death.
    */
-  @EventHandler
+  @EventHandler(ignoreCancelled = true)
   public void onPlayerDeathEvent(PlayerDeathEvent event) {
     Player player = event.getEntity();
 
@@ -254,7 +254,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
    * If protection is enabled, protects barrels from being destroyed by
    * unauthorized players. Prevents the barrel item itself from dropping.
    */
-  @EventHandler
+  @EventHandler(ignoreCancelled = true)
   public void onBlockBreakEvent(BlockBreakEvent event) {
     Block block = event.getBlock();
 
@@ -281,7 +281,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
   /**
    * Protect barrels from explosion damage.
    */
-  @EventHandler
+  @EventHandler(ignoreCancelled = true)
   public void onExplode(EntityExplodeEvent e) {
     /* Clone the list */
     List<Block> blocks = new ArrayList<>(e.blockList());
@@ -295,7 +295,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
   /**
    * Protect barrels from explosion damage.
    */
-  @EventHandler
+  @EventHandler(ignoreCancelled = true)
   public void onExplode(BlockExplodeEvent e) {
     /* Clone the list */
     List<Block> blocks = new ArrayList<>(e.blockList());
@@ -310,7 +310,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
    * If protection is enabled, protect barrel inventories from unauthorized
    * players.
    */
-  @EventHandler
+  @EventHandler(ignoreCancelled = true)
   public void onInventoryOpen(InventoryOpenEvent event) {
     // This event handler is only used for the barrel owner check.
     if (!config.getBoolean("protectFromOtherPlayers")) {
@@ -338,7 +338,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
   /**
    * If enabled, remove barrels when players empty out its inventory.
    */
-  @EventHandler
+  @EventHandler(ignoreCancelled = true)
   public void onInventoryClose(InventoryCloseEvent event) {
     // Feature disabled via config
     if (!config.getBoolean("removeOnEmpty")) {
@@ -366,7 +366,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
   /**
    * If enabled, clean up old barrels when chunks load.
    */
-  @EventHandler
+  @EventHandler(ignoreCancelled = true)
   public void onChunkLoad(ChunkLoadEvent event) {
     long maxBarrelAge = config.getLong("removeBarrelsAfterSeconds");
     // Feature disabled via config
