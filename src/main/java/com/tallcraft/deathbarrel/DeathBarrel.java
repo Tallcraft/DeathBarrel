@@ -1,5 +1,6 @@
 package com.tallcraft.deathbarrel;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +26,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -55,6 +57,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     MemoryConfiguration defaultConfig = new MemoryConfiguration();
 
     defaultConfig.set("removeOnEmpty", true);
+    defaultConfig.set("removeBarrelsAfterSeconds", -1);
     defaultConfig.set("protectFromOtherPlayers", false);
 
     ConfigurationSection messages = defaultConfig.createSection("messages");
@@ -110,6 +113,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     data.set(new NamespacedKey(this, "isDeathBarrel"), PersistentDataType.INTEGER, 1);
     data.set(new NamespacedKey(this, "version"), PersistentDataType.STRING,
              this.getDescription().getVersion());
+    Long timestamp = Instant.now().getEpochSecond();
+    data.set(new NamespacedKey(this, "createdAt"), PersistentDataType.LONG, timestamp);
     data.set(new NamespacedKey(this, "ownerUUID"), PersistentDataType.STRING,
              player.getUniqueId().toString());
     barrel.update();
@@ -356,5 +361,51 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     // Remove empty death barrel
     Barrel deathBarrel = (Barrel) inventoryHolder;
     deathBarrel.getBlock().setType(Material.AIR);
+  }
+
+  /**
+   * If enabled, clean up old barrels when chunks load.
+   */
+  @EventHandler
+  public void onChunkLoad(ChunkLoadEvent event) {
+    long maxBarrelAge = config.getLong("removeBarrelsAfterSeconds");
+    // Feature disabled via config
+    if (maxBarrelAge <= 0) {
+      return;
+    }
+
+    // Newly generated chunks can't contain any DeathBarrels.
+    if (event.isNewChunk()) {
+      return;
+    }
+
+    for (BlockState state : event.getChunk().getTileEntities()) {
+      if (!(state instanceof Barrel)) {
+        continue;
+      }
+      Barrel barrel = (Barrel) state;
+      if (!isDeathBarrel(barrel)) {
+        continue;
+      }
+
+      // Check if barrel has expired and is due for removal.
+      PersistentDataContainer data = barrel.getPersistentDataContainer();
+      NamespacedKey key = new NamespacedKey(this, "createdAt");
+      Long createdAtUnix = data.get(key, PersistentDataType.LONG);
+      if (createdAtUnix == null) {
+        // Old DeathBarrels may not have createdAt, skip them.
+        continue;
+      }
+      Instant createdAt = Instant.ofEpochSecond(createdAtUnix);
+      if (createdAt.plusSeconds(maxBarrelAge).compareTo(Instant.now()) > 0) {
+        // Barrel has not expired.
+        continue;
+      }
+
+      // Barrel has expired, remove it.
+      Bukkit.getLogger().info("Removing expired DeathBarrel at " + barrel.getLocation());
+      barrel.getInventory().clear();
+      barrel.getBlock().setType(Material.AIR);
+    }
   }
 }
