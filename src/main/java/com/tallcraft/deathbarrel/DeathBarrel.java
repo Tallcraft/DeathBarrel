@@ -23,7 +23,11 @@ import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryAction;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -133,7 +137,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         PersistentDataType.INTEGER);
   }
 
-  private boolean isDeathBarrel(InventoryHolder inventoryHolder) {
+  private boolean isDeathBarrel(Object inventoryHolder) {
     if (inventoryHolder == null || !(inventoryHolder instanceof Barrel)) {
       return false;
     }
@@ -364,6 +368,111 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
   }
 
   /**
+   * Prevent moving items into or out of DeathBarrels via hoppers.
+   */
+  @EventHandler(ignoreCancelled = true)
+  public void onInventoryMoveItem(InventoryMoveItemEvent event) {
+    if (isDeathBarrel(event.getDestination().getHolder())
+        || isDeathBarrel(event.getSource().getHolder())) {
+      event.setCancelled(true);
+    }
+  }
+
+  /**
+   * Prevent moving items into DeathBarrels by player via GUI click.
+   */
+  @EventHandler(ignoreCancelled = true)
+  public void onInventoryClickEvent(InventoryClickEvent event) {
+    // We only care about player interactions.
+    if (!(event.getWhoClicked() instanceof Player)) {
+      return;
+    }
+
+    // Check if the player is interacting with a DeathBarrel.
+    Inventory inventory = event.getInventory();
+    if (inventory == null || event.getSlot() < 0) {
+      return;
+    }
+
+    InventoryHolder holder = null;
+    try {
+      holder = inventory.getHolder();
+    } catch (AbstractMethodError e) {
+      e.printStackTrace();
+      return;
+    }
+
+    if (!isDeathBarrel(holder)) {
+      return;
+    }
+
+    // Next check the kind of interaction with the inventory. We want to allow
+    // players to take
+    // items from the barrel, but not insert any.
+    InventoryAction action = event.getAction();
+
+    // Always allow the player to pick up items.
+    if (action.equals(InventoryAction.PICKUP_ALL)
+        || action.equals(InventoryAction.PICKUP_SOME)
+        || action.equals(InventoryAction.PICKUP_ONE)
+        || action.equals(InventoryAction.PICKUP_HALF)
+        || action.equals(InventoryAction.CLONE_STACK)
+        || action.equals(InventoryAction.COLLECT_TO_CURSOR)
+        || action.equals(InventoryAction.HOTBAR_MOVE_AND_READD)
+        || action.equals(InventoryAction.NOTHING)) {
+      return;
+    }
+
+    boolean isContainerSlot = event.getSlot() == event.getRawSlot();
+
+    // Allow moving items out of the barrel by shift clicking.
+    if (action.equals(InventoryAction.MOVE_TO_OTHER_INVENTORY) && isContainerSlot) {
+      return;
+    }
+
+    // Allow swap with cursor outside of the barrel.
+    if ((action.equals(InventoryAction.SWAP_WITH_CURSOR)
+        || action.equals(InventoryAction.HOTBAR_SWAP))
+        && !isContainerSlot) {
+      return;
+    }
+
+    // Allow placing items outside of the container.
+    boolean isItemPlace = action.equals(InventoryAction.PLACE_ALL)
+        || action.equals(InventoryAction.PLACE_ONE)
+        || action.equals(InventoryAction.PLACE_SOME);
+    if (isItemPlace && !isContainerSlot) {
+      return;
+    }
+
+    event.setCancelled(true);
+  }
+
+  /**
+   * Prevent moving items into DeathBarrels by player via GUI drag.
+   */
+  @EventHandler(ignoreCancelled = true)
+  public void onInventoryDragEvent(InventoryDragEvent event) {
+    // We only care about player interactions.
+    if (!(event.getWhoClicked() instanceof Player)) {
+      return;
+    }
+
+    if (!isDeathBarrel(event.getInventory().getHolder())) {
+      return;
+    }
+
+    // Allow drag events in the player inventory.
+    for (int slot : event.getRawSlots()) {
+      if (slot > barrelCapacity - 1) {
+        return;
+      }
+    }
+
+    event.setCancelled(true);
+  }
+
+  /**
    * If enabled, clean up old barrels when chunks load.
    */
   @EventHandler(ignoreCancelled = true)
@@ -380,13 +489,11 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     }
 
     for (BlockState state : event.getChunk().getTileEntities()) {
-      if (!(state instanceof Barrel)) {
+      if (!isDeathBarrel(state)) {
         continue;
       }
+
       Barrel barrel = (Barrel) state;
-      if (!isDeathBarrel(barrel)) {
-        continue;
-      }
 
       // Check if barrel has expired and is due for removal.
       PersistentDataContainer data = barrel.getPersistentDataContainer();
