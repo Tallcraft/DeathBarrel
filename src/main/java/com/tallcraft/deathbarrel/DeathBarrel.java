@@ -1,5 +1,7 @@
 package com.tallcraft.deathbarrel;
 
+import io.papermc.lib.PaperLib;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +55,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
 
     // Enable event handlers.
     getServer().getPluginManager().registerEvents(this, this);
+
+    PaperLib.suggestPaper(this);
   }
 
   private void initConfig() {
@@ -98,7 +102,6 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     }
 
     block.setType(Material.BARREL);
-    // Set identifier to be able to recognise barrel type in the future
 
     // To fix java.lang.ClassCastException:
     // org.bukkit.craftbukkit.v1_14_R1.block.CraftBlockState cannot be cast to
@@ -212,6 +215,13 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
         dropPartition[j] = drops.remove(0);
       }
       barrel.getInventory().setContents(dropPartition);
+
+      // If barrel cleanup is enabled, schedule it for removal after the configured timespan.
+      long removeBarrelsAfterSeconds = config.getLong("removeBarrelsAfterSeconds", -1);
+      if (removeBarrelsAfterSeconds > 0) {
+        new BarrelCleanupTask(this, barrel.getLocation(), removeBarrelsAfterSeconds)
+          .runTaskLater(this, removeBarrelsAfterSeconds * 20);
+      }
     }
 
     return placedBarrelCount > 0;
@@ -472,6 +482,45 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     event.setCancelled(true);
   }
 
+  void cleanupBarrelIfExpired(Block block, long maxBarrelAge) {
+    cleanupBarrelIfExpired(block.getState(), maxBarrelAge);
+  }
+
+
+  private void cleanupBarrelIfExpired(BlockState state, long maxBarrelAge) {
+    if (!isDeathBarrel(state)) {
+      return;
+    }
+    Barrel barrel = (Barrel) state;
+    cleanupBarrelIfExpired(barrel, maxBarrelAge);
+  }
+
+
+  private void cleanupBarrelIfExpired(Barrel barrel, long maxBarrelAge) {
+    if (!isDeathBarrel(barrel)) {
+      return;
+    }
+
+    // Check if barrel has expired and is due for removal.
+    PersistentDataContainer data = barrel.getPersistentDataContainer();
+    NamespacedKey key = new NamespacedKey(this, "createdAt");
+    Long createdAtUnix = data.get(key, PersistentDataType.LONG);
+    if (createdAtUnix == null) {
+      // Old DeathBarrels may not have createdAt, skip them.
+      return;
+    }
+    Instant createdAt = Instant.ofEpochSecond(createdAtUnix);
+    if (createdAt.plusSeconds(maxBarrelAge).compareTo(Instant.now()) > 0) {
+      // Barrel has not expired.
+      return;
+    }
+
+    // Barrel has expired, remove it.
+    this.getLogger().info("Removing expired DeathBarrel at " + barrel.getLocation());
+    barrel.getInventory().clear();
+    barrel.getBlock().setType(Material.AIR);
+  }
+
   /**
    * If enabled, clean up old barrels when chunks load.
    */
@@ -487,32 +536,8 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     if (event.isNewChunk()) {
       return;
     }
-
     for (BlockState state : event.getChunk().getTileEntities()) {
-      if (!isDeathBarrel(state)) {
-        continue;
-      }
-
-      Barrel barrel = (Barrel) state;
-
-      // Check if barrel has expired and is due for removal.
-      PersistentDataContainer data = barrel.getPersistentDataContainer();
-      NamespacedKey key = new NamespacedKey(this, "createdAt");
-      Long createdAtUnix = data.get(key, PersistentDataType.LONG);
-      if (createdAtUnix == null) {
-        // Old DeathBarrels may not have createdAt, skip them.
-        continue;
-      }
-      Instant createdAt = Instant.ofEpochSecond(createdAtUnix);
-      if (createdAt.plusSeconds(maxBarrelAge).compareTo(Instant.now()) > 0) {
-        // Barrel has not expired.
-        continue;
-      }
-
-      // Barrel has expired, remove it.
-      Bukkit.getLogger().info("Removing expired DeathBarrel at " + barrel.getLocation());
-      barrel.getInventory().clear();
-      barrel.getBlock().setType(Material.AIR);
+      cleanupBarrelIfExpired(state, maxBarrelAge);
     }
   }
 }
