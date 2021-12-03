@@ -239,10 +239,12 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
     }
 
     Location location = player.getLocation();
-    List<ItemStack> drops = event.getDrops();
-    while (location.getBlockY() < 2) {
-      location.setY(location.getBlockY() + 1);
+    int minHeight = location.getWorld().getMinHeight() + 2;
+
+    if (location.getBlockY() < minHeight) {
+      location.setY(minHeight);
     }
+
     /* Found the air to the terrain surface */
     while (location.getBlock().getType() != Material.AIR
         && location.getBlock().getType() != Material.VOID_AIR
@@ -253,7 +255,7 @@ public final class DeathBarrel extends JavaPlugin implements Listener {
       location.setY(location.getBlockY() + 1);
     }
 
-    boolean created = createDeathBarrels(player, drops, location);
+    boolean created = createDeathBarrels(player, event.getDrops(), location);
 
     player.sendMessage(Util.fillArgs(getConfig().getString("messages.deathLocation"),
                        String.valueOf(location.getBlockX()),
